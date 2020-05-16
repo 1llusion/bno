@@ -1,0 +1,1 @@
+from gym_foodgame.envs.foodgame_env import FoodGameEnv
