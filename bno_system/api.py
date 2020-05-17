@@ -28,6 +28,8 @@ class GameAPI:
 
             # Convert from numpy array to numpy int to python native int
             action = action[0][0].astype(int).item()
+            # Taking the absolute value of an action
+            action = abs(action)
 
             observation = player_api.do_action(uid, action)
             if observation:

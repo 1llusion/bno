@@ -12,7 +12,7 @@ class FoodGameEnv(gym.Env):
   player_model = None # Set this externally
   all_scores = [] # Rewards of other players
   game_results = [] # When rendering, bots ranking is appended here
-  action_score = 10 # 10 is maximum score that can be gained
+  turn = 1 # Counts actions in a turn 0 - 9
 
   enemy_model = None
 
@@ -32,6 +32,9 @@ class FoodGameEnv(gym.Env):
 
     self.bot_model = None
 
+    self.action_boundary = api._get_boundaries() # Stores the action boundary
+    self.action_score = 0  # 10 is maximum score that can be gained
+
   def reset(self):
     # Resetting game
     self.api = GameAPI.BotAPI()
@@ -42,8 +45,8 @@ class FoodGameEnv(gym.Env):
     self.player_uid = self.players[randint(0, len(self.players) - 1)]
     self.current_step = 0
 
-    self.action_score = 10
-
+    self.action_score = 0
+    self.turn = 1
     return self._next_observation()
 
   def _next_observation(self):
@@ -52,7 +55,9 @@ class FoodGameEnv(gym.Env):
     return obs
 
   def step(self, action):
-    observation = self._take_action(int(action))
+    # Making sure the actions aren't negative
+    action = abs(int(action))
+    observation = self._take_action(action)
 
     self.current_step += 1
 
@@ -71,18 +76,31 @@ class FoodGameEnv(gym.Env):
       ranking_score = (self.score - min(self.all_scores)) / (max(self.all_scores) - min(self.all_scores))
 
     # Checking if action is valid
-    if int(action) < 0 or GameSystem.players[self.player_uid].invalid_action:
+    if GameSystem.players[self.player_uid].invalid_action:
       if not self.action_score <= -10:
-        self.action_score -= 1
+        bias = 10 - self.turn # Used to adjust the score. If  a wrong action in step 1, it should carry as much weight as wrong action in step 10
+        self.action_score -= 1 + bias
     else:
-      if not self.action_score >= 10:
+      if self.action_score < 10:
         self.action_score += 1
     # Computing score for actions between -1 and 1
     norm_action_score = 2*(self.action_score + 10) / 20 - 1
 
+    # Adding an extra deterrent when all actions are wrong
+    if norm_action_score == -1:
+      norm_action_score = -2
+
     # Getting final reward (note that action score and ranking score is split 50/50)
     reward = (ranking_score + norm_action_score) / 2
 
+    # Adding a big reward hit when boundary if overstepped
+    if action > self.action_boundary:
+      reward -= action - self.action_boundary
+
+    # Ticking over turn
+    if self.turn >= 10:
+      self.turn = 0
+    self.turn += 1
     return obs, reward, done, {}
 
   def _take_action(self, action):
