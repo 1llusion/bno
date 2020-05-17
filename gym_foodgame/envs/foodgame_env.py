@@ -63,7 +63,10 @@ class FoodGameEnv(gym.Env):
 
     self.score = GameSystem.players[self.player_uid].score
     self.day = GameSystem.day
-    done = False if GameSystem.players[self.player_uid].alive else True
+    if GameSystem.game_ended() or not GameSystem.players[self.player_uid].alive:
+      done = True
+    else:
+      done = False
 
     obs = self._next_observation()
 
@@ -96,6 +99,10 @@ class FoodGameEnv(gym.Env):
     # Adding a big reward hit when boundary if overstepped
     if action > self.action_boundary:
       reward -= action - self.action_boundary
+
+    # Adding big reward if game ended and player is still alive
+    if done and GameSystem.players[self.player_uid].alive:
+      reward += reward * self.day
 
     # Ticking over turn
     if self.turn >= 10:
