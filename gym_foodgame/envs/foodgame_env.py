@@ -102,7 +102,7 @@ class FoodGameEnv(gym.Env):
 
     # Adding big reward if game ended and player is still alive
     if done and GameSystem.players[self.player_uid].alive:
-      reward += reward * self.day
+      reward += self.score * self.day
 
     # Ticking over turn
     if self.turn >= 10:

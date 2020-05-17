@@ -309,18 +309,18 @@ class Player:
         :param amount:
         :return:
         """
-        if self.energy - amount < 0:
+        if self.energy - amount <= 0 or amount == 0:
             return False
 
-        self.coins += (2 * amount) * self.skill['money_conversion_skill']
+        self.coins += (2 * amount - 1) * self.skill['money_conversion_skill']
         self.energy -= amount
         return True
 
     def energy_to_food(self, amount):
-        if self.energy - amount < 0:
+        if self.energy - amount < 0 or amount == 0:
             return False
 
-        self.food += (2 * amount) * self.skill['food_conversion_skill']
+        self.food += (2 * amount - 1) * self.skill['food_conversion_skill']
         self.energy -= amount
         return True
 
@@ -352,13 +352,15 @@ class Player:
         if bid > self.coins:
             return False
 
+        if mid not in list(GameSystem.food_market):
+            return False
+
         if priority not in GameSystem.food_bids:
             GameSystem.food_bids[priority] = {}
         if mid not in GameSystem.food_bids[priority]:
             GameSystem.food_bids[priority][mid] = {}
 
         GameSystem.food_bids[priority][mid][self.uid] = bid
-
         return True
 
     def add_food_vote(self, vote):
