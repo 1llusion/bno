@@ -21,10 +21,10 @@ class FoodGameEnv(gym.Env):
     glob_max = np.finfo(np.float32).max
     glob_min = np.finfo(np.float32).min
 
-    self.action_space = spaces.Box(0 ,1010321, shape=(1,), dtype=np.int)
+    self.action_space = spaces.Box(-1010321 ,1010321, shape=(1,), dtype=np.int)
 
     # Observation is the state of all players
-    self.observation_space = spaces.Box(glob_min, glob_max, shape=(244,), dtype=np.float32)
+    self.observation_space = spaces.Box(glob_min, glob_max, shape=(253,), dtype=np.float32)
 
     # Store what the agent tried
     self.curr_episode = -1
@@ -50,7 +50,7 @@ class FoodGameEnv(gym.Env):
     return self._next_observation()
 
   def _next_observation(self):
-    obs = self.api.observation(self.player_uid)
+    obs = self.api.observation(self.player_uid, ver=2)
 
     return obs
 
@@ -132,7 +132,7 @@ class FoodGameEnv(gym.Env):
     :param star_uid:
     :return: None
     """
-    self.api.observation(self.player_uid, save_to_db=True)
+    self.api.observation(self.player_uid, save_to_db=True, ver=2)
     if GameSystem.game_ended() or not GameSystem.players[self.player_uid].alive:
       all_scores = {}
 

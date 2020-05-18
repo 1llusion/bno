@@ -71,7 +71,9 @@ class GameSystem:
             success = cls._do_actions(uid, action_list[uid])
 
         # Sorting out markets
-        cls._do_market_auctions()
+        success = cls._do_market_auctions()
+        if not success:
+            print("REEEEE")
 
         # Skill Auction
         cls._do_skill_auction()
@@ -154,31 +156,36 @@ class GameSystem:
 
     @classmethod
     def _do_market_auctions(cls):
+        success = True
         market_priorities = cls._get_market_priorities()
         markets_for_removal = []
-        for market_priority in market_priorities:
-            # Looping through markets
-            for mid in cls.food_bids[market_priority]:
-                auction = cls.food_market[mid]
-                highest_bid = {"bid": auction['start_bid'],
-                               "uid": False}
-                for uid in cls.food_bids[market_priority][mid]:
-                    # Adding bids
-                    if highest_bid['bid'] < cls.food_bids[market_priority][mid][uid] <= cls.players[uid].food:
-                        highest_bid['bid'] = cls.food_bids[market_priority][mid][uid]
-                        highest_bid['uid'] = uid
+        try:
+            for market_priority in market_priorities:
+                # Looping through markets
+                for mid in cls.food_bids[market_priority]:
+                    auction = cls.food_market[mid]
+                    highest_bid = {"bid": auction['start_bid'],
+                                   "uid": False}
+                    for uid in cls.food_bids[market_priority][mid]:
+                        # Adding bids
+                        if highest_bid['bid'] < cls.food_bids[market_priority][mid][uid] <= cls.players[uid].food:
+                            highest_bid['bid'] = cls.food_bids[market_priority][mid][uid]
+                            highest_bid['uid'] = uid
 
-                # A person won the bid
-                if highest_bid['uid']:
-                    cls.players[highest_bid['uid']].food += auction['amount']
-                    cls.players[highest_bid['uid']].coins -= highest_bid['bid']
-                    # Adding money to auction winner
-                    cls.players[auction['uid']].coins += highest_bid['bid']
-                    # Deleting auction
-                    markets_for_removal.append(mid)
+                    # A person won the bid
+                    if highest_bid['uid']:
+                        cls.players[highest_bid['uid']].food += auction['amount']
+                        cls.players[highest_bid['uid']].coins -= highest_bid['bid']
+                        # Adding money to auction winner
+                        cls.players[auction['uid']].coins += highest_bid['bid']
+                        # Deleting auction
+                        markets_for_removal.append(mid)
 
-        for mid in markets_for_removal:
-            del cls.food_market[mid]
+            for mid in markets_for_removal:
+                del cls.food_market[mid]
+        except:
+            success = False
+        return success
 
     @classmethod
     def _do_skill_auction(cls):

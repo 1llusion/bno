@@ -53,34 +53,26 @@ def build_network():
     global action_input
     # Next, we build a very simple model.
     actor = Sequential()
-    actor.add(Flatten(input_shape=(1,) + env.observation_space.shape))
-    actor.add(Dense(1024))
+    actor.add(Flatten(input_shape=(10,) + env.observation_space.shape))
+    actor.add(Dense(448))
     actor.add(Activation('relu'))
-    actor.add(Dense(2048))
+    actor.add(Dense(448))
     actor.add(Activation('relu'))
-    actor.add(Dense(4096))
-    actor.add(Activation('relu'))
-    actor.add(Dense(2048))
-    actor.add(Activation('relu'))
-    actor.add(Dense(1024))
+    actor.add(Dense(448))
     actor.add(Activation('relu'))
     actor.add(Dense(nb_actions))
     actor.add(Activation('linear'))
     #print(actor.summary())
 
     action_input = Input(shape=(nb_actions,), name='action_input')
-    observation_input = Input(shape=(1,) + env.observation_space.shape, name='observation_input')
+    observation_input = Input(shape=(10,) + env.observation_space.shape, name='observation_input')
     flattened_observation = Flatten()(observation_input)
     x = Concatenate()([action_input, flattened_observation])
-    x = Dense(2048)(x)
+    x = Dense(448)(x)
     x = Activation('relu')(x)
-    x = Dense(2048)(x)
+    x = Dense(448)(x)
     x = Activation('relu')(x)
-    x = Dense(2048)(x)
-    x = Activation('relu')(x)
-    x = Dense(2048)(x)
-    x = Activation('relu')(x)
-    x = Dense(2048)(x)
+    x = Dense(448)(x)
     x = Activation('relu')(x)
     x = Dense(1)(x)
     x = Activation('linear')(x)
@@ -98,23 +90,23 @@ if os.path.exists("model_" + str(iteration) + "_actor.h5"):
     model_actor.load_weights("model_" + str(iteration) + "_actor.h5")
     model_critic.load_weights("model_" + str(iteration) + "_critic.h5")
 
-memory = SequentialMemory(limit=1000000, window_length=1)
+memory = SequentialMemory(limit=1000000, window_length=10)
 random_process = OrnsteinUhlenbeckProcess(size=nb_actions, theta=.15, mu=0., sigma=.3)
 agent = DDPGAgent(nb_actions=nb_actions, actor=model_actor, critic=model_critic, critic_action_input=action_input,
                   memory=memory, nb_steps_warmup_critic=1000, nb_steps_warmup_actor=1000,
                   random_process=random_process, gamma=.99, target_model_update=0.001)
-agent.compile(Adam(lr=.001, clipnorm=1.), metrics=['mae'])
+agent.compile(Adam(lr=.001, clipnorm=.01), metrics=['mae'])
 
 rounds = 1
-while rounds <= 20:
+while rounds <= 50:
     if iteration > 0:
         player_actor = load_model("model_" + str(iteration) + ".h5")
         print("Competing against", "model_" + str(iteration) + ".h5")
         env.enemy_model = player_actor
 
-    agent.fit(env, nb_steps=100000, visualize=False, verbose=3, nb_max_episode_steps=1000)
+    agent.fit(env, nb_steps=10000, visualize=False, verbose=3, nb_max_episode_steps=1000)
 
-    agent.test(env, nb_episodes=100, visualize=True, nb_max_episode_steps=1000)
+    agent.test(env, nb_episodes=10, visualize=True, nb_max_episode_steps=1000)
 
     curr_avg = sum(env.game_results) / len(env.game_results)
     print("Current average:", curr_avg)

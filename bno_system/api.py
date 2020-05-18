@@ -110,7 +110,13 @@ class GameAPI:
 
             self.db = DatabaseAPI.get_database("Mongo")
 
-        def observation(self, uid, save_to_db=False):
+        def observation(self, uid, save_to_db=False, ver=1):
+            """
+            :param uid:
+            :param save_to_db:
+            :param ver: Version, added for backward compatibility
+            :return:
+            """
             food = GameSystem.players[uid].food
             energy = GameSystem.players[uid].energy
             coins = GameSystem.players[uid].coins
@@ -145,11 +151,13 @@ class GameAPI:
             global_max_bid = GameSystem.global_max_bid
 
             scores = []
+            players_alive = []
             for player in GameSystem.players:
                 if player == uid:
                     continue
 
                 scores.append(GameSystem.players[player].score)
+                players_alive.append(int(GameSystem.players[player].alive))
             if save_to_db:
                 db_obs = {
                             "uid": uid,
@@ -170,16 +178,26 @@ class GameAPI:
                             "global_min_bid": global_min_bid,
                             "global_max_bid": global_max_bid,
                             "food_market": [*food_market],
+                            "players_alive": [*players_alive],
                             "action_memory": [*GameSystem.players[uid].action_memory],
                          }
                 self.db.store_observation(db_obs, duplicate=False)
 
-            obs = [*GameSystem.players[uid].action_memory,
-                   food, energy, coins,
-                   min_bid_skill, max_bid_skill, energy_skill, money_conversion_skill, food_conversion_skill, auction_skill,
-                   alive, food_requirement, day,
-                   global_min_bid, global_max_bid, *food_market,
-                   *scores, self_score]
+            if ver == 1:
+                obs = [*GameSystem.players[uid].action_memory,
+                       food, energy, coins,
+                       min_bid_skill, max_bid_skill, energy_skill, money_conversion_skill, food_conversion_skill, auction_skill,
+                       alive, food_requirement, day,
+                       global_min_bid, global_max_bid, *food_market,
+                       *scores, self_score]
+            else:
+                obs = [*GameSystem.players[uid].action_memory,
+                       food, energy, coins,
+                       min_bid_skill, max_bid_skill, energy_skill, money_conversion_skill, food_conversion_skill,
+                       auction_skill,
+                       alive, food_requirement, day,
+                       global_min_bid, global_max_bid, *food_market,
+                       *scores, *players_alive,self_score]
             return obs
 
         def do_action(self, uid, action):
