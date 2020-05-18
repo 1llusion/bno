@@ -11,11 +11,12 @@ from tensorflow.python.framework.ops import disable_eager_execution
 from rl.agents import DDPGAgent
 from rl.memory import SequentialMemory
 from rl.random import OrnsteinUhlenbeckProcess
-import ctypes
 
 from scipy import stats
 from configparser import ConfigParser
 import os.path
+
+WINDOW_SIZE = 300
 
 # Setting and reading configuration file
 config = ConfigParser()
@@ -53,7 +54,7 @@ def build_network():
     global action_input
     # Next, we build a very simple model.
     actor = Sequential()
-    actor.add(Flatten(input_shape=(10,) + env.observation_space.shape))
+    actor.add(Flatten(input_shape=(WINDOW_SIZE,) + env.observation_space.shape))
     actor.add(Dense(448))
     actor.add(Activation('relu'))
     actor.add(Dense(448))
@@ -65,7 +66,7 @@ def build_network():
     #print(actor.summary())
 
     action_input = Input(shape=(nb_actions,), name='action_input')
-    observation_input = Input(shape=(10,) + env.observation_space.shape, name='observation_input')
+    observation_input = Input(shape=(WINDOW_SIZE,) + env.observation_space.shape, name='observation_input')
     flattened_observation = Flatten()(observation_input)
     x = Concatenate()([action_input, flattened_observation])
     x = Dense(448)(x)
@@ -90,7 +91,7 @@ if os.path.exists("model_" + str(iteration) + "_actor.h5"):
     model_actor.load_weights("model_" + str(iteration) + "_actor.h5")
     model_critic.load_weights("model_" + str(iteration) + "_critic.h5")
 
-memory = SequentialMemory(limit=1000000, window_length=10)
+memory = SequentialMemory(limit=1000000, window_length=WINDOW_SIZE)
 random_process = OrnsteinUhlenbeckProcess(size=nb_actions, theta=.15, mu=0., sigma=.3)
 agent = DDPGAgent(nb_actions=nb_actions, actor=model_actor, critic=model_critic, critic_action_input=action_input,
                   memory=memory, nb_steps_warmup_critic=1000, nb_steps_warmup_actor=1000,
