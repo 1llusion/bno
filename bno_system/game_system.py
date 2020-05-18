@@ -307,7 +307,7 @@ class Player:
     # Actions
     def end_turn(self):
         self._end_turn()
-        self.score += (self.coins + self.energy + self.food) * (GameSystem.day + 1)
+        self.score += (self.coins + self.food) * (GameSystem.day + 1)
         self.turn_ended = True
 
     def energy_to_coins(self, amount):
