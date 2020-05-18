@@ -34,10 +34,13 @@ class FoodGameEnv(gym.Env):
 
     self.action_boundary = api._get_boundaries() # Stores the action boundary
     self.action_score = 0  # 10 is maximum score that can be gained
+    self.game_api = GameAPI()
 
   def reset(self):
     # Resetting game
     self.api = GameAPI.BotAPI()
+    self.game_api = GameAPI()
+
     GameSystem.do_reset()
     self.players = [GameSystem.add_player() for x in range(10)]
 
@@ -56,7 +59,7 @@ class FoodGameEnv(gym.Env):
 
   def step(self, action):
     # Making sure the actions aren't negative
-    action = abs(int(action))
+    action = int(action)
     observation = self._take_action(action)
 
     self.current_step += 1
@@ -70,42 +73,39 @@ class FoodGameEnv(gym.Env):
 
     obs = self._next_observation()
 
-    self.all_scores = observation[-len(self.players):]  # Adding current scores so that it can be scaled between 0 and 1
-
-    # Get ranking score (0 - 1)
-    if (max(self.all_scores) - min(self.all_scores)) == 0:
-      ranking_score = 0
-    else:
-      ranking_score = (self.score - min(self.all_scores)) / (max(self.all_scores) - min(self.all_scores))
-
     # Checking if action is valid
-    if GameSystem.players[self.player_uid].invalid_action:
+    if GameSystem.players[self.player_uid].invalid_action or action <= 0:
       if not self.action_score <= -10:
-        bias = 10 - self.turn # Used to adjust the score. If  a wrong action in step 1, it should carry as much weight as wrong action in step 10
-        self.action_score -= 1 + bias
+        self.action_score -= 1
     else:
       if self.action_score < 10:
         self.action_score += 1
-    # Computing score for actions between -1 and 1
-    norm_action_score = 2*(self.action_score + 10) / 20 - 1
 
-    # Adding an extra deterrent when all actions are wrong
-    if norm_action_score == -1:
-      norm_action_score = -2
-
-    # Getting final reward (note that action score and ranking score is split 50/50)
-    reward = (ranking_score + norm_action_score) / 2
-
-    # Adding a big reward hit when boundary if overstepped
-    if action > self.action_boundary:
-      reward -= action - self.action_boundary
-
-    # Adding big reward if game ended and player is still alive
-    if done and GameSystem.players[self.player_uid].alive:
-      reward += self.score * self.day
-
-    # Ticking over turn
+    reward = 0
     if self.turn >= 10:
+      self.all_scores = observation[
+                        -len(self.players):]  # Adding current scores so that it can be scaled between 0 and 1
+      # Get ranking score (0 - 1)
+      if (max(self.all_scores) - min(self.all_scores)) == 0:
+        ranking_score = 0
+      else:
+        ranking_score = (self.score - min(self.all_scores)) / (max(self.all_scores) - min(self.all_scores))
+
+      # Computing score for actions between -1 and 1
+      norm_action_score = 2*(self.action_score + 10) / 20 - 1
+
+      # Adding an extra deterrent when all actions are wrong
+      if norm_action_score == -1:
+        norm_action_score = -2
+
+      # Getting final reward (note that action score and ranking score is split 50/50)
+      reward = (ranking_score + norm_action_score) / 2
+
+      # Adding big reward if game ended and player is still alive
+      if done and GameSystem.players[self.player_uid].alive:
+        reward += self.score * self.day
+
+      # Ticking over turn
       self.turn = 0
     self.turn += 1
     return obs, reward, done, {}
@@ -117,7 +117,7 @@ class FoodGameEnv(gym.Env):
     #GameAPI.random_mode(other_players, self.api)
 
     # Compete against trained bots
-    GameAPI.compete_mode(self.enemy_model, other_players, self.api)
+    self.game_api.compete_mode(self.enemy_model, other_players, self.api)
 
     # Compete against one random and one trained bot
     #GameAPI.nothing_mode(other_players, self.api)

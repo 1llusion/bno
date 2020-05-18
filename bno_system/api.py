@@ -1,12 +1,13 @@
 from bno_system import Player, GameSystem
-import uuid
 from random import randint
 import math
 import numpy as np
 from DatabaseAPI import DatabaseAPI
+from collections import deque
 
 
 class GameAPI:
+    observation_memory = {}  # Observation memory
     @staticmethod
     def random_mode(players, player_api):
         score = []
@@ -18,12 +19,20 @@ class GameAPI:
                 score.append(observation[-1])
         return score
 
-    @staticmethod
-    def compete_mode(model, players, player_api):
+    def compete_mode(self, model, players, player_api):
         score = []
         for uid in players:
+            # Initialising observation memory
+            if uid not in self.observation_memory:
+                self.observation_memory[uid] = deque([[0] * 253] * 10)
             observation = player_api.observation(uid)
-            observation = list([[[observation]]])
+
+            self.observation_memory[uid].append(observation)
+            self.observation_memory[uid].popleft()
+
+            # I have no idea why this works. Please explain! I'm sure it's wrong..
+            observation = [[self.observation_memory[uid]]]
+
             action = model.predict(observation)
 
             # Convert from numpy array to numpy int to python native int
@@ -110,7 +119,7 @@ class GameAPI:
 
             self.db = DatabaseAPI.get_database("Mongo")
 
-        def observation(self, uid, save_to_db=False, ver=1):
+        def observation(self, uid, save_to_db=False, ver=2):
             """
             :param uid:
             :param save_to_db:
@@ -190,7 +199,7 @@ class GameAPI:
                        alive, food_requirement, day,
                        global_min_bid, global_max_bid, *food_market,
                        *scores, self_score]
-            else:
+            elif ver == 2:
                 obs = [*GameSystem.players[uid].action_memory,
                        food, energy, coins,
                        min_bid_skill, max_bid_skill, energy_skill, money_conversion_skill, food_conversion_skill,
