@@ -75,11 +75,17 @@ class FoodGameEnv(gym.Env):
 
     # Checking if action is valid
     if GameSystem.players[self.player_uid].invalid_action or action <= 0:
-      if not self.action_score <= -10:
-        self.action_score -= 1
+      if self.action_score > -10:
+        bias = -1 + self.turn - 1 # Adjusting so that even first bad move results in very bad bias
+        self.action_score += bias
+      else:
+        self.action_score = -10
     else:
       if self.action_score < 10:
-        self.action_score += 1
+        bias = 10 - self.turn + 1 # Even first good turn should have very good bias
+        self.action_score += bias
+      else:
+        self.action_score = 10
 
     reward = 0
     if self.turn >= 10:
