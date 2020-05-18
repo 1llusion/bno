@@ -98,7 +98,7 @@ agent = DDPGAgent(nb_actions=nb_actions, actor=model_actor, critic=model_critic,
 agent.compile(Adam(lr=.001, clipnorm=.01), metrics=['mae'])
 
 rounds = 1
-while rounds <= 50:
+while rounds <= 150:
     if iteration > 0:
         player_actor = load_model("model_" + str(iteration) + ".h5")
         print("Competing against", "model_" + str(iteration) + ".h5")
