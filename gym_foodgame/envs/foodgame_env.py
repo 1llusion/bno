@@ -76,7 +76,7 @@ class FoodGameEnv(gym.Env):
     # Checking if action is valid
     if GameSystem.players[self.player_uid].invalid_action or action <= 0:
       if self.action_score > -10:
-        bias = -1 + self.turn - 1 # Adjusting so that even first bad move results in very bad bias
+        bias = -10 + self.turn - 1 # Adjusting so that even first bad move results in very bad bias
         self.action_score += bias
       else:
         self.action_score = -10
@@ -86,8 +86,11 @@ class FoodGameEnv(gym.Env):
         self.action_score += bias
       else:
         self.action_score = 10
+    # Computing score for actions between -1 and 1
+    norm_action_score = 2 * (self.action_score + 10) / 20 - 1
+    reward = norm_action_score
 
-    reward = 0
+    # Add player scores when turn is up
     if self.turn >= 10:
       self.all_scores = observation[
                         -len(self.players):]  # Adding current scores so that it can be scaled between 0 and 1
@@ -97,15 +100,12 @@ class FoodGameEnv(gym.Env):
       else:
         ranking_score = (self.score - min(self.all_scores)) / (max(self.all_scores) - min(self.all_scores))
 
-      # Computing score for actions between -1 and 1
-      norm_action_score = 2*(self.action_score + 10) / 20 - 1
-
       # Adding an extra deterrent when all actions are wrong
-      if norm_action_score == -1:
-        norm_action_score = -2
+      #if norm_action_score == -1:
+      #  norm_action_score = -2
 
-      # Getting final reward (note that action score and ranking score is split 50/50)
-      reward = (ranking_score + norm_action_score) / 2
+      # Getting final reward
+      reward = ranking_score + norm_action_score
 
       # Adding big reward if game ended and player is still alive
       if done and GameSystem.players[self.player_uid].alive:
@@ -113,6 +113,7 @@ class FoodGameEnv(gym.Env):
 
       # Ticking over turn
       self.turn = 0
+      self.action_score = 0 #Resetting action score for next round
     self.turn += 1
     return obs, reward, done, {}
 
