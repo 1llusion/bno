@@ -16,7 +16,7 @@ from scipy import stats
 from configparser import ConfigParser
 import os.path
 
-WINDOW_SIZE = 300
+WINDOW_SIZE = 40
 
 # Setting and reading configuration file
 config = ConfigParser()
@@ -55,11 +55,23 @@ def build_network():
     # Next, we build a very simple model.
     actor = Sequential()
     actor.add(Flatten(input_shape=(WINDOW_SIZE,) + env.observation_space.shape))
-    actor.add(Dense(448))
+    actor.add(Dense(1000))
     actor.add(Activation('relu'))
-    actor.add(Dense(448))
+    actor.add(Dense(1000))
     actor.add(Activation('relu'))
-    actor.add(Dense(448))
+    actor.add(Dense(1000))
+    actor.add(Activation('relu'))
+    actor.add(Dense(1000))
+    actor.add(Activation('relu'))
+    actor.add(Dense(1000))
+    actor.add(Activation('relu'))
+    actor.add(Dense(1000))
+    actor.add(Activation('relu'))
+    actor.add(Dense(1000))
+    actor.add(Activation('relu'))
+    actor.add(Dense(1000))
+    actor.add(Activation('relu'))
+    actor.add(Dense(1000))
     actor.add(Activation('relu'))
     actor.add(Dense(nb_actions))
     actor.add(Activation('linear'))
@@ -69,11 +81,23 @@ def build_network():
     observation_input = Input(shape=(WINDOW_SIZE,) + env.observation_space.shape, name='observation_input')
     flattened_observation = Flatten()(observation_input)
     x = Concatenate()([action_input, flattened_observation])
-    x = Dense(448)(x)
+    x = Dense(1000)(x)
     x = Activation('relu')(x)
-    x = Dense(448)(x)
+    x = Dense(1000)(x)
     x = Activation('relu')(x)
-    x = Dense(448)(x)
+    x = Dense(1000)(x)
+    x = Activation('relu')(x)
+    x = Dense(1000)(x)
+    x = Activation('relu')(x)
+    x = Dense(1000)(x)
+    x = Activation('relu')(x)
+    x = Dense(1000)(x)
+    x = Activation('relu')(x)
+    x = Dense(1000)(x)
+    x = Activation('relu')(x)
+    x = Dense(1000)(x)
+    x = Activation('relu')(x)
+    x = Dense(1000)(x)
     x = Activation('relu')(x)
     x = Dense(1)(x)
     x = Activation('linear')(x)
@@ -99,7 +123,7 @@ agent = DDPGAgent(nb_actions=nb_actions, actor=model_actor, critic=model_critic,
 agent.compile(Adam(lr=.001, clipnorm=.01), metrics=['mae'])
 
 rounds = 1
-while rounds <= 150:
+while rounds <= 10:
     if iteration > 0:
         player_actor = load_model("model_" + str(iteration) + ".h5")
         print("Competing against", "model_" + str(iteration) + ".h5")

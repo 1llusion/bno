@@ -24,7 +24,7 @@ class FoodGameEnv(gym.Env):
     self.action_space = spaces.Box(-1010321 ,1010321, shape=(1,), dtype=np.int)
 
     # Observation is the state of all players
-    self.observation_space = spaces.Box(glob_min, glob_max, shape=(253,), dtype=np.float32)
+    self.observation_space = spaces.Box(glob_min, glob_max, shape=(254,), dtype=np.float32)
 
     # Store what the agent tried
     self.curr_episode = -1
@@ -35,6 +35,7 @@ class FoodGameEnv(gym.Env):
     self.action_boundary = api._get_boundaries() # Stores the action boundary
     self.action_score = 0  # 10 is maximum score that can be gained
     self.game_api = GameAPI()
+    self.reward = 0 # Reward added over time
 
   def reset(self):
     # Resetting game
@@ -50,10 +51,11 @@ class FoodGameEnv(gym.Env):
 
     self.action_score = 0
     self.turn = 1
+    self.reward = 0
     return self._next_observation()
 
   def _next_observation(self):
-    obs = self.api.observation(self.player_uid, ver=2)
+    obs = self.api.observation(self.player_uid, ver=3)
 
     return obs
 
@@ -66,32 +68,37 @@ class FoodGameEnv(gym.Env):
 
     self.score = GameSystem.players[self.player_uid].score
     self.day = GameSystem.day
-    if GameSystem.game_ended() or not GameSystem.players[self.player_uid].alive:
-      done = True
-    else:
-      done = False
+
+    # Letting the game run beyond the actual end of the game. Teaching the bot to just survive for the longest
+    done = False if GameSystem.players[self.player_uid].alive else True
 
     obs = self._next_observation()
 
     # Checking if action is valid
-    if GameSystem.players[self.player_uid].invalid_action or action <= 0:
-      if self.action_score > -10:
-        bias = -10 + self.turn - 1 # Adjusting so that even first bad move results in very bad bias
+    if GameSystem.players[self.player_uid].invalid_action:
+      if self.action_score > -3:
+        bias = -3 + self.turn - 1 # Adjusting so that even first bad move results in very bad bias
         self.action_score += bias
       else:
-        self.action_score = -10
+        self.action_score = -3
     else:
-      if self.action_score < 10:
-        bias = 10 - self.turn + 1 # Even first good turn should have very good bias
+      if self.action_score < 3:
+        bias = 3 - self.turn + 1 # Even first good turn should have very good bias
         self.action_score += bias
       else:
-        self.action_score = 10
+        self.action_score = 3
     # Computing score for actions between -1 and 1
-    norm_action_score = 2 * (self.action_score + 10) / 20 - 1
+    norm_action_score = 2 * (self.action_score + 3) / 6 - 1
     reward = norm_action_score
 
+    # Adding a big hit if AI overshoots the action boundary or goes negative
+    if action < 0:
+      reward -= abs(action)
+    elif action > self.action_boundary:
+      reward -= (action - self.action_boundary)
+
     # Add player scores when turn is up
-    if self.turn >= 10:
+    if self.turn >= 3:
       self.all_scores = observation[
                         -len(self.players):]  # Adding current scores so that it can be scaled between 0 and 1
       # Get ranking score (0 - 1)
@@ -100,15 +107,14 @@ class FoodGameEnv(gym.Env):
       else:
         ranking_score = (self.score - min(self.all_scores)) / (max(self.all_scores) - min(self.all_scores))
 
-      # Adding an extra deterrent when all actions are wrong
-      #if norm_action_score == -1:
-      #  norm_action_score = -2
+      # Adjusting long-term ranking score to track progress over time
+      self.reward = (self.reward + ranking_score) / 2 * self.day / 100
 
       # Getting final reward
-      reward = ranking_score + norm_action_score
+      reward = self.reward + norm_action_score
 
       # Adding big reward if game ended and player is still alive
-      if done and GameSystem.players[self.player_uid].alive:
+      if not done and GameSystem.players[self.player_uid].alive:
         reward += self.score * self.day
 
       # Ticking over turn
@@ -139,7 +145,7 @@ class FoodGameEnv(gym.Env):
     :param star_uid:
     :return: None
     """
-    self.api.observation(self.player_uid, save_to_db=True, ver=2)
+    self.api.observation(self.player_uid, save_to_db=True, ver=3)
     if GameSystem.game_ended() or not GameSystem.players[self.player_uid].alive:
       all_scores = {}
 

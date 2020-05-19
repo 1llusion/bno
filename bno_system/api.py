@@ -24,7 +24,7 @@ class GameAPI:
         for uid in players:
             # Initialising observation memory
             if uid not in self.observation_memory:
-                self.observation_memory[uid] = deque([[0] * 253] * 10)
+                self.observation_memory[uid] = deque([[0] * 253] * 40)
             observation = player_api.observation(uid)
 
             self.observation_memory[uid].append(observation)
@@ -112,7 +112,7 @@ class GameAPI:
                              }
                             ]
 
-            # Holds information on whether a bot is ready to end turn (len < 10) or ready to finish turn
+            # Holds information on whether a bot is ready to end turn (len < 3) or ready to finish turn
             self.bot_actions = {}
             # Boundary for integer action
             self.action_boundary = self._get_boundaries()
@@ -137,6 +137,7 @@ class GameAPI:
             auction_skill = GameSystem.players[uid].skill["auction_skill"]
             alive = int(GameSystem.players[uid].alive)
             self_score = GameSystem.players[uid].score
+            skill_auction = list(GameSystem.skill_votes).index(GameSystem.skill_auction)
 
             # Food market info [amount, start_bid]
             food_market = []
@@ -207,6 +208,14 @@ class GameAPI:
                        alive, food_requirement, day,
                        global_min_bid, global_max_bid, *food_market,
                        *scores, *players_alive,self_score]
+            elif ver == 3:
+                obs = [*GameSystem.players[uid].action_memory,
+                       food, energy, coins,
+                       min_bid_skill, max_bid_skill, energy_skill, money_conversion_skill, food_conversion_skill, auction_skill,
+                       skill_auction,
+                       alive, food_requirement, day,
+                       global_min_bid, global_max_bid, *food_market,
+                       *scores, *players_alive, self_score]
             return obs
 
         def do_action(self, uid, action):
@@ -247,13 +256,13 @@ class GameAPI:
 
                 # Appending action
                 if uid in self.bot_actions:
-                    if len(self.bot_actions[uid]) < 10:
+                    if len(self.bot_actions[uid]) < 3:
                         self.bot_actions[uid].append(transformed_action)
                 else:
                     self.bot_actions[uid] = [transformed_action]
 
                 # Checking if enough actions are present to end turn
-                if len(self.bot_actions[uid]) >= 10:
+                if len(self.bot_actions[uid]) >= 3:
                     player.end_turn()
                     turn_ended = GameSystem.do_turn(self.bot_actions)
 
