@@ -28,7 +28,7 @@ class GameSystem:
                    "money_conversion_skill": 0,
                    "food_conversion_skill": 0,
                    "auction_skill": 0, }
-    skill_auction = False    # Skill on auction
+    skill_auction = "food_conversion_skill"    # Skill on auction
 
     @classmethod
     def add_player(cls, username=False):
@@ -118,6 +118,7 @@ class GameSystem:
                            "money_conversion_skill": 0,
                            "food_conversion_skill": 0,
                            "auction_skill": 0}
+        cls.skill_auction = "food_conversion_skill"
 
     @classmethod
     def _get_priorities(cls):
@@ -198,7 +199,7 @@ class GameSystem:
                 max_bid['uid'] = uid
 
         # Making sure an auction is actually taking place
-        if cls.skill_auction >= 0 and max_bid['uid'] and cls.skill_auction:
+        if max_bid['uid'] and cls.skill_auction:
             cls.players[max_bid['uid']].skill[cls.skill_auction] += 1
             cls.players[max_bid['uid']].coins -= max_bid['bid']
 

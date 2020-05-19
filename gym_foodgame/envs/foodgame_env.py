@@ -114,7 +114,7 @@ class FoodGameEnv(gym.Env):
       reward = self.reward + norm_action_score
 
       # Adding big reward if game ended and player is still alive
-      if not done and GameSystem.players[self.player_uid].alive:
+      if GameSystem.players[self.player_uid].alive and not done:
         reward += self.score * self.day
 
       # Ticking over turn
